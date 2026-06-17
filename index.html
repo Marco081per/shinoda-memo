@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>超シノダメモ v2</title>
+  <title>超シノダメモ v3</title>
   <link rel="manifest" href="./manifest.json">
+
   <style>
-/* ===== 既存デザインそのまま（省略なし） ===== */
+/* ===== デザイン ===== */
 body {
   font-family: "Consolas", "Courier New", monospace;
   margin: 0;
@@ -102,6 +103,7 @@ button:hover {
   box-shadow: 0 0 20px rgba(88,166,255,0.8);
 }
 
+/* ===== メモカード ===== */
 .memo-card {
   background: #0d1117;
   padding: 15px;
@@ -112,8 +114,11 @@ button:hover {
   position: relative;
 }
 
-.memo-card::before,
-.memo-card::after {
+/* 角の六角形（4つ） */
+.memo-card .hex-tl,
+.memo-card .hex-tr,
+.memo-card .hex-bl,
+.memo-card .hex-br {
   content: "";
   position: absolute;
   width: 12px;
@@ -123,8 +128,81 @@ button:hover {
   box-shadow: inset 0 0 2px #000;
 }
 
-.memo-card::before { top: 6px; left: 6px; }
-.memo-card::after { bottom: 6px; right: 6px; }
+.memo-card .hex-tl { top: 6px; left: 6px; }
+.memo-card .hex-tr { top: 6px; right: 6px; }
+.memo-card .hex-bl { bottom: 6px; left: 6px; }
+.memo-card .hex-br { bottom: 6px; right: 6px; }
+/* ボタン横並び */
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+/* カード全体を包む */
+.memo-wrap {
+  margin-bottom: 20px;
+}
+
+/* カード外の操作バー */
+.memo-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+/* MEMO番号（外側用） */
+.memo-tag {
+  padding: 6px 12px;
+  background: #161b22;
+  border: 2px solid #58a6ff;
+  color: #58a6ff;
+  border-radius: 6px;
+  font-size: 14px;
+  text-shadow: 0 0 6px rgba(88,166,255,0.8);
+  box-shadow: 0 0 10px rgba(88,166,255,0.4);
+}
+
+/* 編集・削除ボタン（外側用） */
+.memo-btn {
+  padding: 6px 12px;
+  background: #161b22;
+  border: 2px solid #30363d;
+  color: #ff6b6b;
+  border-radius: 6px;
+  cursor: pointer;
+  text-shadow: 0 0 6px rgba(255,107,107,0.8);
+}
+
+.memo-btn:hover {
+  background: #21262d;
+  border-color: #ff6b6b;
+  box-shadow: 0 0 10px rgba(255,107,107,0.6);
+}
+
+/* MEMO番号をボタン風に */
+.memo-tag {
+  padding: 6px 12px;
+  background: #161b22;
+  border: 2px solid #58a6ff;
+  color: #58a6ff;
+  border-radius: 6px;
+  font-size: 14px;
+  text-shadow: 0 0 6px rgba(88,166,255,0.8);
+  box-shadow: 0 0 10px rgba(88,166,255,0.4);
+}
+
+/* MEMO番号 */
+.memo-number {
+  position: absolute;
+  top: 4px;
+  left: 24px;
+  color: #58a6ff;
+  font-size: 12px;
+  opacity: 0.8;
+  text-shadow: 0 0 6px rgba(88,166,255,0.6);
+}
 
 .memo-card button {
   margin-top: 8px;
@@ -133,6 +211,10 @@ button:hover {
   color: #ff6b6b;
   text-shadow: 0 0 6px rgba(255, 107, 107, 0.8);
 }
+.memo-card button {
+  width: auto;
+  padding: 6px 12px;
+}
 
 .memo-card button:hover {
   background: #21262d;
@@ -140,7 +222,7 @@ button:hover {
   box-shadow: 0 0 10px rgba(255, 107, 107, 0.6);
 }
 
-/* ===== 検索バー・並び替えボタン ===== */
+/* ===== 検索・並び替え ===== */
 .control-bar {
   display: flex;
   gap: 10px;
@@ -165,7 +247,7 @@ button:hover {
   cursor: pointer;
 }
 
-/* ===== スマホ最適化 ===== */
+/* ===== スマホ ===== */
 @media (max-width: 600px) {
   body { padding: 12px; }
   textarea { height: 120px; }
@@ -182,7 +264,6 @@ button:hover {
 
 <h2>メモを追加しろこの野郎</h2>
 
-<!-- 検索 + 並び替え -->
 <div class="control-bar">
   <input id="searchInput" placeholder="検索（リアルタイム）">
   <button class="sort-btn" id="sortBtn">新しい順</button>
@@ -246,13 +327,13 @@ sortBtn.addEventListener("click", () => {
   renderMemos();
 });
 
-/* ===== メモ表示 ===== */
+/* ===== メモ表示（完全版） ===== */
 function renderMemos() {
   memoList.innerHTML = "";
 
-  let filtered = memos.filter(m =>
-    m.text.includes(searchInput.value)
-  );
+  let filtered = memos
+    .map((m, i) => ({ ...m, realIndex: i }))
+    .filter(m => m.text.includes(searchInput.value));
 
   filtered.sort((a, b) => {
     return sortNewFirst
@@ -260,17 +341,33 @@ function renderMemos() {
       : new Date(a.date) - new Date(b.date);
   });
 
-  filtered.forEach((memo, index) => {
-    const div = document.createElement("div");
-    div.className = "memo-card";
-    div.innerHTML = `
+filtered.forEach((memo, index) => {
+  const wrap = document.createElement("div");
+  wrap.className = "memo-wrap";
+
+  const memoNumber = String(memo.realIndex + 1).padStart(3, "0");
+
+  wrap.innerHTML = `
+    <div class="memo-header">
+      <span class="memo-tag">MEMO ${memoNumber}</span>
+      <button class="memo-btn" onclick="editMemo(${memo.realIndex})">編集</button>
+      <button class="memo-btn" onclick="deleteMemo(${memo.realIndex})">削除</button>
+    </div>
+
+    <div class="memo-card">
+      <div class="hex-tl"></div>
+      <div class="hex-tr"></div>
+      <div class="hex-bl"></div>
+      <div class="hex-br"></div>
+
       <p>${memo.text}</p>
-      <small>${memo.date}</small><br>
-      <button onclick="editMemo(${index})">編集</button>
-      <button onclick="deleteMemo(${index})">削除</button>
-    `;
-    memoList.appendChild(div);
-  });
+      <small>${memo.date}</small>
+    </div>
+  `;
+
+  memoList.appendChild(wrap);
+});
+
 }
 
 /* ===== 編集 ===== */
@@ -285,7 +382,7 @@ function deleteMemo(index) {
   memos.splice(index, 1);
   localStorage.setItem("memos", JSON.stringify(memos));
   renderMemos();
-  editIndex = null; 
+  editIndex = null;
 }
 
 /* ===== 起動アニメ ===== */
